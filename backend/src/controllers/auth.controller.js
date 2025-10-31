@@ -88,17 +88,43 @@ const logout = catchAsync(async (req, res, next) => {
     const token = req.cookies?.refreshToken;
     if (!token) {
         res.clearCookie("refreshToken", cookieOptions);
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Logged Out",
         });
     }
 
-    let payload = promisify(jwt.verify)(
-        token,
-        process.env.REFRESH_TOKEN_SECRET
-    );
+    let payload;
+    try {
+        payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    } catch (error) {
+        // Token is invalid or expired — try to clean up session if possible
+        try {
+            const decoded = jwt.decode(token);
+            if (decoded?.id) {
+                const user = await User.findById(decoded.id).select(
+                    "+sessions"
+                );
+                if (user) {
+                    const tokenHash = hashToken(token);
+                    user.sessions = user.sessions.filter(
+                        (s) => s.refreshTokenHash !== tokenHash
+                    );
+                    await user.save();
+                }
+            }
+        } catch (err) {
+            // Ignore any errors during cleanup
+        }
 
+        res.clearCookie("refreshToken", cookieOptions);
+        return res.status(200).json({
+            status: "success",
+            message: "Logged out",
+        });
+    }
+
+    // Token is valid — now find the user and remove the session
     const user = await User.findById(payload.id).select("+sessions");
     if (user) {
         const tokenHash = hashToken(token);
@@ -107,6 +133,7 @@ const logout = catchAsync(async (req, res, next) => {
         );
         await user.save();
     }
+
     res.clearCookie("refreshToken", cookieOptions);
     res.status(200).json({
         status: "success",
@@ -115,48 +142,18 @@ const logout = catchAsync(async (req, res, next) => {
 });
 
 const refreshToken = catchAsync(async (req, res, next) => {
-    const token = req.cookies?.refreshToken;
-    if (!token) {
-        return next(new AppError("No refresh token provided", 401));
-    }
+    const { user, sessionIndex } = req;
 
-    let payload = promisify(jwt.verify)(
-        token,
-        process.env.REFRESH_TOKEN_SECRET
-    );
-
-    const user = await User.findById(payload.id).select("+sessions");
-    if (!user) {
-        return next(new AppError("User not found", 404));
-    }
-
-    const tokenHash = hashToken(token);
-    let sessionIndex = user.sessions.findIndex(
-        (s) => s.refreshTokenHash === tokenHash
-    );
-    if (sessionIndex === -1) {
-        // possible token reuse: token valid but not found server-side => security incident
-        user.sessions = []; // revoke all sessions
-        await user.save();
-        res.clearCookie("refreshToken", cookieOptions);
-        res.status(401).json({
-            status: "fail",
-            message: "Refresh token reuse detected, Please login again.",
-        });
-    }
-
-    // rotate: issue new refresh token and access token
     const newAccessToken = signAccessToken({ id: user._id, role: user.role });
     const newRefreshToken = signRefreshToken({ id: user._id, role: user.role });
     const newHash = hashToken(newRefreshToken);
 
-    // replace stored hash (rotation)
     user.sessions[sessionIndex].refreshTokenHash = newHash;
     user.sessions[sessionIndex].createdAt = Date.now();
-    user.save();
+    await user.save();
 
     res.cookie("refreshToken", newRefreshToken, cookieOptions);
-    res.json({ status: "success", data: { accessToken: newAccessToken } });
+    res.json({ status: "success", accessToken: newAccessToken });
 });
 
 module.exports = {

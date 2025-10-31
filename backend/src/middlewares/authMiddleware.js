@@ -29,27 +29,57 @@ const requireAuth = catchAsync(async (req, res, next) => {
 
 const verifyRefreshToken = catchAsync(async (req, res, next) => {
     const token = req.cookies?.refreshToken;
-    if (!token) {
-        return next(new AppError("No refresh token provided", 401));
-    }
+    if (!token)
+        return res.status(401).json({ message: "No refresh token provided" });
 
-    let payload = promisify(jwt.verify)(
-        token,
-        process.env.REFRESH_TOKEN_SECRET
-    );
+    let payload;
+    try {
+        payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+        // Try to extract user ID from the token (even if expired)
+        const decoded = jwt.decode(token);
+
+        if (decoded?.id) {
+            const user = await User.findById(decoded.id).select("+sessions");
+            if (user) {
+                const tokenHash = hashToken(token);
+                user.sessions = user.sessions.filter(
+                    (s) => s.refreshTokenHash !== tokenHash
+                );
+                await user.save();
+            }
+        }
+
+        res.clearCookie("refreshToken", cookieOptions);
+        return res.status(401).json({
+            status: "fail",
+            message: "Refresh token expired or invalid. Please login again.",
+        });
+    }
 
     const user = await User.findById(payload.id).select("+sessions");
-    if (!user) {
-        return next(new AppError("User not found", 404));
-    }
+    if (!user) return res.status(401).json({ message: "User not found" });
 
     const tokenHash = hashToken(token);
-    let isSessionValid = user.sessions.some(
+    const sessionIndex = user.sessions?.findIndex(
         (s) => s.refreshTokenHash === tokenHash
     );
-    if (!isSessionValid) {
-        return next(new AppError("Invalid refresh token", 403));
+
+    if (sessionIndex === -1) {
+        // Reuse detected: clean up all sessions
+        user.sessions = [];
+        await user.save();
+        res.clearCookie("refreshToken", cookieOptions);
+        return res.status(401).json({
+            status: "fail",
+            message: "Refresh token reuse detected. Please login again.",
+        });
     }
+
+    // Attach to request for controller use
+    req.user = user;
+    req.sessionIndex = sessionIndex;
+    req.tokenHash = tokenHash;
     next();
 });
 

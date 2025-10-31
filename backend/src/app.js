@@ -4,6 +4,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const authRoutes = require("./routes/auth.routes");
+const globalErrorHandler = require("./middlewares/errorHandlingMiddleware");
 
 const app = express();
 
@@ -15,13 +16,18 @@ app.use(
     cors({
         origin: process.env.CLIENT_URL || "http://localhost:3000",
         credentials: true, // allows cookies and auth headers
-        allowedHeaders: ["Authorization", "Content-Type"],
+        // allowedHeaders: ["Authorization", "Content-Type"],
         methods: ["'GET", "POST", "PUT", "PATCH", "DELETE"],
     })
 );
-app.use(morgan("dev"));
+if (process.env.NODE_ENV === "development") {
+    app.use(morgan("dev"));
+}
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
+
+// Global Error handling
+app.use(globalErrorHandler);
 
 module.exports = app;

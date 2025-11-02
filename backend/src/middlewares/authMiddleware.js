@@ -1,25 +1,38 @@
-const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
 
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
 const User = require("../models/user.model");
+const { hashToken } = require("../utils/token");
+
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 const requireAuth = catchAsync(async (req, res, next) => {
     const authHeader = req.headers.authorization;
+    console.log(authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
         return next(new AppError("Unauthorized", 401));
     }
 
-    const payload = promisify(jwt.verify)(
-        authHeader,
-        process.env.ACCESS_TOKEN_SECRET
-    );
+    const token = authHeader.split(" ")[1]; // Extract token after "Bearer "
+
+    let payload;
+    try {
+        payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch (error) {
+        return next(new AppError("Invalid or expired access token", 401));
+    }
 
     const user = await User.findById(payload?.id);
     if (!user) {
         return next(new AppError("User not found", 404));
     }
+
     req.user = {
         id: payload.id,
         role: payload.role,

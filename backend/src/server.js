@@ -7,9 +7,10 @@ const PORT = process.env.PORT || 5000;
 
 // Start server after DB connection
 const startServer = async () => {
+    let server;
     connectDB()
         .then(() => {
-            const server = http.createServer(app);
+            server = http.createServer(app);
 
             server.listen(PORT, () => {
                 console.log(`🚀 Server running on http://localhost:${PORT}`);

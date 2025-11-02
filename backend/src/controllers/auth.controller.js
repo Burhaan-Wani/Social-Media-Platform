@@ -80,6 +80,7 @@ const login = catchAsync(async (req, res, next) => {
         ip: req.ip,
     });
 
+    await user.save();
     res.cookie("refreshToken", refreshToken, cookieOptions);
     res.json({ status: "success", data: { accessToken } });
 });

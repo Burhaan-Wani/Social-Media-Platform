@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
             required: true,
             unique: true,
             trim: true,
+            minlength: 3,
         },
         email: {
             type: String,
@@ -18,54 +19,38 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: true,
-            select: false,
+            minlength: 6,
         },
-        profilePic: {
-            type: String,
-            default: "",
-        },
-        bio: {
-            type: String,
-            maxlength: 160,
-        },
-        followers: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
-        following: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
-        role: {
-            type: String,
-            enum: ["user", "admin"],
-            default: "user",
-        },
+
+        // 🔹 Profile Details
+        fullName: { type: String, trim: true },
+        bio: { type: String, trim: true, maxlength: 200 },
+        profilePic: { type: String, default: "" },
+        location: { type: String, trim: true },
+        website: { type: String, trim: true },
+
+        // 🔹 Social Graph
+        followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+        // 🔹 Auth Sessions (from your Auth module)
         sessions: [
             {
                 refreshTokenHash: String,
-                createdAt: {
-                    type: Date,
-                    default: Date.now,
-                },
+                createdAt: { type: Date, default: Date.now },
                 userAgent: String,
                 ip: String,
             },
         ],
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
-// encrypt password in pre-save middleware
+// Password hashing
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 12);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
 });
 
@@ -73,5 +58,4 @@ userSchema.methods.comparePasswords = async function (password, hashPassword) {
     return await bcrypt.compare(password, hashPassword);
 };
 const User = mongoose.model("User", userSchema);
-
 module.exports = User;

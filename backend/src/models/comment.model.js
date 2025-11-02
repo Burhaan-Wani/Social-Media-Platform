@@ -7,27 +7,19 @@ const commentSchema = new mongoose.Schema(
             ref: "Post",
             required: true,
         },
-        author: {
+        user: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
         },
-        content: {
+        text: {
             type: String,
             required: true,
-            maxlength: 500,
-        },
-        parentComment: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Comment",
-            default: null,
+            trim: true,
+            maxlength: 1000,
         },
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
-const Comment = require("Comment", commentSchema);
-
-module.exports = Comment;
+const Comment = mongoose.model("Comment", commentSchema);

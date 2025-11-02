@@ -2,17 +2,24 @@ const mongoose = require("mongoose");
 
 const postSchema = new mongoose.Schema(
     {
-        author: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        content: {
+        caption: {
             type: String,
-            maxlength: 1000,
+            trim: true,
+            maxlength: 2200,
         },
         mediaUrl: {
             type: String,
+            required: [true, "Media is required"],
+        },
+        mediaType: {
+            type: String,
+            enum: ["image", "video"],
+            required: true,
+        },
+        owner: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
         },
         likes: [
             {
@@ -20,14 +27,14 @@ const postSchema = new mongoose.Schema(
                 ref: "User",
             },
         ],
-        commentCount: {
-            type: Number,
-            default: 0,
-        },
+        comments: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Comment",
+            },
+        ],
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
 const Post = mongoose.model("Post", postSchema);

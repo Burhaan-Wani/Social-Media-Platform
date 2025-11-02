@@ -14,7 +14,6 @@ const cookieOptions = {
 
 const requireAuth = catchAsync(async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    console.log(authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
         return next(new AppError("Unauthorized", 401));
     }

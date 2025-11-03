@@ -7,6 +7,7 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const postRoutes = require("./routes/post.routes");
 const feedRoutes = require("./routes/feed.routes");
+const notificationRoutes = require("./routes/feed.routes");
 const globalErrorHandler = require("./middlewares/errorHandlingMiddleware");
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/posts", postRoutes);
 app.use("/api/v1/feeds", feedRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 // Global Error handling
 app.use(globalErrorHandler);

@@ -5,18 +5,17 @@ const postSchema = new mongoose.Schema(
         caption: {
             type: String,
             trim: true,
-            maxlength: 2200,
+            maxlength: 500,
         },
-        mediaUrl: {
-            type: String,
-            required: [true, "Media is required"],
+        media: {
+            url: String,
+            publicId: String, // Cloudinary reference
+            type: {
+                type: String,
+                enum: ["image", "video"],
+            },
         },
-        mediaType: {
-            type: String,
-            enum: ["image", "video"],
-            required: true,
-        },
-        owner: {
+        author: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,

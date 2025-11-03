@@ -16,10 +16,24 @@ const commentSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
-            maxlength: 1000,
+            maxlength: 300,
         },
+        likes: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
+        replies: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Comment", // enables threaded replies
+            },
+        ],
     },
     { timestamps: true }
 );
 
 const Comment = mongoose.model("Comment", commentSchema);
+
+module.exports = Comment;

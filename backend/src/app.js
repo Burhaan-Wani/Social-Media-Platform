@@ -5,8 +5,9 @@ const morgan = require("morgan");
 
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
+const postRoutes = require("./routes/post.routes");
+const feedRoutes = require("./routes/feed.routes");
 const globalErrorHandler = require("./middlewares/errorHandlingMiddleware");
-const upload = require("./middlewares/multer");
 
 const app = express();
 
@@ -18,7 +19,6 @@ app.use(
     cors({
         origin: process.env.CLIENT_URL || "http://localhost:3000",
         credentials: true, // allows cookies and auth headers
-        // allowedHeaders: ["Authorization", "Content-Type"],
         methods: ["'GET", "POST", "PUT", "PATCH", "DELETE"],
     })
 );
@@ -26,13 +26,11 @@ if (process.env.NODE_ENV === "development") {
     app.use(morgan("dev"));
 }
 
-app.post("/upload", upload.single("file"), (req, res) => {
-    console.log(req.file);
-    res.send("uploaded");
-});
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/posts", postRoutes);
+app.use("/api/v1/feeds", feedRoutes);
 
 // Global Error handling
 app.use(globalErrorHandler);

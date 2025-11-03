@@ -6,6 +6,7 @@ const {
     uploadToCloudinary,
     deleteFromCloudninary,
 } = require("../utils/cloudinaryUploadAndDelete");
+const createNotification = require("../utils/createNotification");
 
 const createPost = catchAsync(async (req, res, next) => {
     const { caption } = req.body;
@@ -149,6 +150,13 @@ const likeUnlikePost = catchAsync(async (req, res, next) => {
         post.likes.push(userId);
     }
 
+    // ✅ Trigger notification only if liked
+    await createNotification({
+        recipientId: post.author._id,
+        senderId: req.user._id,
+        type: "like",
+        postId: post._id,
+    });
     await post.save();
 
     res.status(200).json({
@@ -156,6 +164,7 @@ const likeUnlikePost = catchAsync(async (req, res, next) => {
         message: isLiked ? "Post unliked" : "Post liked",
     });
 });
+
 const addComment = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const { text } = req.body;
@@ -173,7 +182,14 @@ const addComment = catchAsync(async (req, res, next) => {
 
     post.comments.push(comment._id);
     await post.save();
-    res.status(200).json({
+    await createNotification({
+        recipientId: post.author._id,
+        senderId: req.user.id,
+        type: "comment",
+        postId: post._id,
+        commentId: comment._id,
+    });
+    await res.status(200).json({
         status: "success",
         data: {
             comment,

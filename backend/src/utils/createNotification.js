@@ -1,5 +1,6 @@
 const Notification = require("../models/notification.model");
 const User = require("../models/user.model");
+const { getSocketServer, onlineUsers } = require("../socket");
 const AppError = require("./AppError");
 
 const createNotification = async ({
@@ -28,6 +29,8 @@ const createNotification = async ({
                 message = "You have a new notification";
         }
 
+        // ✅ Real-time: Emit notification to recipient if online
+
         const notification = await Notification.create({
             recipient: recipientId,
             sender: senderId,
@@ -36,6 +39,11 @@ const createNotification = async ({
             post: postId,
             comment: commentId,
         });
+        const io = getSocketServer();
+        const recipientSocketId = onlineUsers.get(recipientId.toString());
+        if (io && recipientSocketId) {
+            io.to(recipientSocketId).emit("notification", notification);
+        }
 
         return notification;
     } catch (error) {

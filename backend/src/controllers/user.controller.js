@@ -1,6 +1,7 @@
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/catchAsync");
+const createNotification = require("../utils/createNotification");
 
 const myProfile = catchAsync(async (req, res, next) => {
     const { id } = req.user;
@@ -128,6 +129,11 @@ const followUnfollowUser = catchAsync(async (req, res, next) => {
             }
         );
 
+        await createNotification({
+            recipientId: targetUser._id,
+            senderId: req.user.id,
+            type: "follow",
+        });
         return res.status(200).json({
             status: "success",
             message: "User unfollowed",
